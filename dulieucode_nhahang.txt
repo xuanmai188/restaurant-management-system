@@ -1,0 +1,164 @@
+CREATE DATABASE IF NOT EXISTS dulieunhahang
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
+
+USE dulieunhahang;
+
+-- 1. Bảng roles
+CREATE TABLE roles (
+    role_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    role_name VARCHAR(50) NOT NULL
+) ENGINE=InnoDB;
+
+-- 2. Bảng users
+CREATE TABLE users (
+    user_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(100) NOT NULL,
+    phone VARCHAR(15),
+    email VARCHAR(100),
+    username VARCHAR(50) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role_id INT(11),
+    status ENUM('active', 'inactive') DEFAULT 'active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_users_role
+        FOREIGN KEY (role_id) REFERENCES roles(role_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- 3. Bảng floors
+CREATE TABLE floors (
+    floor_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    floor_name VARCHAR(50) NOT NULL,
+    description VARCHAR(255)
+) ENGINE=InnoDB;
+
+-- 4. Bảng tables
+CREATE TABLE tables (
+    table_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    floor_id INT(11),
+    table_name VARCHAR(50) NOT NULL,
+    capacity INT(11) NOT NULL,
+    status ENUM('available', 'occupied', 'reserved', 'maintenance') DEFAULT 'available',
+    CONSTRAINT fk_tables_floor
+        FOREIGN KEY (floor_id) REFERENCES floors(floor_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- 5. Bảng customers
+CREATE TABLE customers (
+    customer_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    user_id INT(11),
+    customer_name VARCHAR(100) NOT NULL,
+    phone VARCHAR(15),
+    email VARCHAR(100),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_customers_user
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- 6. Bảng categories
+CREATE TABLE categories (
+    category_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    category_name VARCHAR(100) NOT NULL,
+    description VARCHAR(255)
+) ENGINE=InnoDB;
+
+-- 7. Bảng menu_items
+CREATE TABLE menu_items (
+    item_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    category_id INT(11),
+    item_name VARCHAR(100) NOT NULL,
+    price DECIMAL(12,2) NOT NULL,
+    description VARCHAR(255),
+    status ENUM('available', 'out_of_stock', 'discontinued') DEFAULT 'available',
+    CONSTRAINT fk_menu_items_category
+        FOREIGN KEY (category_id) REFERENCES categories(category_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- 8. Bảng orders
+CREATE TABLE orders (
+    order_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    table_id INT(11),
+    customer_id INT(11),
+    waiter_id INT(11),
+    order_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('new', 'processing', 'serving', 'completed', 'paid', 'cancelled') DEFAULT 'new',
+    total_amount DECIMAL(12,2) DEFAULT 0.00,
+    CONSTRAINT fk_orders_table
+        FOREIGN KEY (table_id) REFERENCES tables(table_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+    CONSTRAINT fk_orders_customer
+        FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+    CONSTRAINT fk_orders_waiter
+        FOREIGN KEY (waiter_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- 9. Bảng order_details
+CREATE TABLE order_details (
+    order_detail_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    order_id INT(11),
+    item_id INT(11),
+    quantity INT(11) NOT NULL,
+    unit_price DECIMAL(12,2) NOT NULL,
+    note VARCHAR(255),
+    item_status ENUM('pending', 'preparing', 'done', 'served', 'cancelled') DEFAULT 'pending',
+    CONSTRAINT fk_order_details_order
+        FOREIGN KEY (order_id) REFERENCES orders(order_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_order_details_item
+        FOREIGN KEY (item_id) REFERENCES menu_items(item_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- 10. Bảng reservations
+CREATE TABLE reservations (
+    reservation_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT(11),
+    table_id INT(11),
+    reservation_time DATETIME NOT NULL,
+    number_of_people INT(11) NOT NULL,
+    note VARCHAR(255),
+    status ENUM('pending', 'confirmed', 'cancelled', 'completed') DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_reservations_customer
+        FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+    CONSTRAINT fk_reservations_table
+        FOREIGN KEY (table_id) REFERENCES tables(table_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- 11. Bảng payments
+CREATE TABLE payments (
+    payment_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    order_id INT(11),
+    cashier_id INT(11),
+    payment_method ENUM('cash', 'bank_transfer', 'card', 'e_wallet') NOT NULL,
+    amount_paid DECIMAL(12,2) NOT NULL,
+    payment_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    payment_status ENUM('success', 'failed', 'refunded') DEFAULT 'success',
+    CONSTRAINT fk_payments_order
+        FOREIGN KEY (order_id) REFERENCES orders(order_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_payments_cashier
+        FOREIGN KEY (cashier_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+) ENGINE=InnoDB;
