@@ -1,0 +1,7 @@
+RewriteEngine On
+
+# Redirect /a to /a.php
+RewriteRule ^a$ a.php [L]
+
+# Redirect /admin to /admin.php
+RewriteRule ^admin$ admin.php [L]
